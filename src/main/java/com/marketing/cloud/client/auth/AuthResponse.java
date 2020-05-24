@@ -1,6 +1,7 @@
 package com.marketing.cloud.client.auth;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 
 public class AuthResponse {
 
@@ -63,5 +64,17 @@ public class AuthResponse {
 
     public void setSoapInstanceUrl(String soapInstanceUrl) {
         this.soapInstanceUrl = soapInstanceUrl;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("accessToken", "REDACTED")
+                .add("tokenType", tokenType)
+                .add("expiresInSecs", expiresInSecs)
+                .add("scope", scope)
+                .add("restInstanceUrl", restInstanceUrl)
+                .add("soapInstanceUrl", soapInstanceUrl)
+                .toString();
     }
 }

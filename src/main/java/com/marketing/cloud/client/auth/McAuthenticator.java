@@ -1,7 +1,6 @@
 package com.marketing.cloud.client.auth;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Joiner;
 import com.marketing.cloud.client.config.McConfigurationProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,26 +10,24 @@ import org.springframework.web.client.RestTemplate;
 public class McAuthenticator implements Authenticator {
 
     private static final Logger logger = LoggerFactory.getLogger(McAuthenticator.class);
-    private static final String TSSD_AUTH_URL = "https://%s.auth.marketingcloudapis.com/v2/token";
-    private static final char SPACE = ' ';
 
     private final RestTemplate rest;
     private final McConfigurationProperties config;
-    private final AuthRequest authRequest;
+    private final String authUrl;
 
     public McAuthenticator(RestTemplate rest, McConfigurationProperties config) {
         this.rest = rest;
         this.config = config;
-        authRequest = baseRequest();
+        this.authUrl = config.getAuthUrl();
     }
 
     @Override
     public AuthResponse authenticate(String tenantId) {
         logger.info("Starting authentication with marketing cloud for tenant id [{}].", tenantId);
-        final String tenantSpecificAuthUrl = String.format(TSSD_AUTH_URL, tenantId);
+        final String tenantSpecificAuthUrl = String.format(authUrl, tenantId);
         final ResponseEntity<AuthResponse> response;
         try {
-            response = rest.postForEntity(tenantSpecificAuthUrl, authRequest, AuthResponse.class);
+            response = rest.postForEntity(tenantSpecificAuthUrl, baseRequest(), AuthResponse.class);
         } catch (Exception e) {
             throw new AuthenticationException(e);
         }
@@ -40,23 +37,22 @@ public class McAuthenticator implements Authenticator {
             throw new AuthenticationException("Response for authentication request is null.");
         }
 
-        logger.info("Successful authenticating with marketing cloud for tenant id [{}].", tenantId);
+        logger.info("Successful authenticating with marketing cloud for tenant id [{}]. Auth response is {}", tenantId, responseBody);
         return response.getBody();
     }
 
     private AuthRequest baseRequest() {
         final AuthRequest authRequest = new AuthRequest();
         authRequest.setClientId(config.getClientId());
-        authRequest.setGrantType("client_credentials");
         authRequest.setClientSecret(config.getClientSecret());
-        authRequest.setScope(Joiner.on(SPACE).join(config.getScope()));
+        authRequest.setScope(config.getScope());
         return authRequest;
     }
 
     private static class AuthRequest {
 
         @JsonProperty("grant_type")
-        private String grantType;
+        private String grantType = "client_credentials";
         @JsonProperty("client_id")
         private String clientId;
         @JsonProperty("client_secret")

@@ -6,8 +6,11 @@ import com.github.benmanes.caffeine.cache.Expiry;
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import java.time.Duration;
+
 /**
  * An {@linkplain Authenticator} that caches token until expiration.
+ *
  */
 public class AuthenticationManager implements Authenticator {
     private final Cache<String, AuthResponse> tokenCache;
@@ -16,7 +19,8 @@ public class AuthenticationManager implements Authenticator {
     public AuthenticationManager(Authenticator authenticator) {
         this.authenticator = authenticator;
         tokenCache = Caffeine.newBuilder()
-                .expireAfter(new AuthResponseEntry())
+                //https://developer.salesforce.com/docs/atlas.en-us.mc-app-development.meta/mc-app-development/access-token-s2s.htm
+                .expireAfterWrite(Duration.ofMinutes(18))
                 .recordStats()
                 .build();
     }
@@ -27,23 +31,6 @@ public class AuthenticationManager implements Authenticator {
             return tokenCache.get(tenantId, authenticator::authenticate);
         } catch (Exception e) {
             throw new AuthenticationException("Cannot retrieve token from cache", e);
-        }
-    }
-
-    private static class AuthResponseEntry implements Expiry<String, AuthResponse> {
-        @Override
-        public long expireAfterCreate(@NonNull String key, @NonNull AuthResponse value, long currentTime) {
-            return value.getExpiresInSecs();
-        }
-
-        @Override
-        public long expireAfterUpdate(@NonNull String key, @NonNull AuthResponse value, long currentTime, @NonNegative long currentDuration) {
-            return value.getExpiresInSecs();
-        }
-
-        @Override
-        public long expireAfterRead(@NonNull String key, @NonNull AuthResponse value, long currentTime, @NonNegative long currentDuration) {
-            return Long.MAX_VALUE;
         }
     }
 }
