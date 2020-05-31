@@ -1,6 +1,8 @@
-package com.marketing.cloud.client.auth;
+package com.marketing.cloud.client.soap;
 
 import com.marketing.cloud.client.TenantIdExtractor;
+import com.marketing.cloud.client.auth.AuthenticationException;
+import com.marketing.cloud.client.auth.Authenticator;
 import org.springframework.ws.WebServiceMessage;
 import org.springframework.ws.client.WebServiceClientException;
 import org.springframework.ws.client.WebServiceIOException;

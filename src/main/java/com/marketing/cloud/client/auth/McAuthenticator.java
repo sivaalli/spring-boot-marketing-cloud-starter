@@ -1,44 +1,74 @@
 package com.marketing.cloud.client.auth;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marketing.cloud.client.config.McConfigurationProperties;
+import com.marketing.cloud.client.rest.McPaths;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.http.MediaType;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 public class McAuthenticator implements Authenticator {
 
     private static final Logger logger = LoggerFactory.getLogger(McAuthenticator.class);
+    private static final ObjectMapper mapper = new ObjectMapper();
 
-    private final RestTemplate rest;
     private final McConfigurationProperties config;
-    private final String authUrl;
+    private final CloseableHttpClient httpClient = HttpClients.createMinimal();
 
-    public McAuthenticator(RestTemplate rest, McConfigurationProperties config) {
-        this.rest = rest;
+    public McAuthenticator(McConfigurationProperties config) throws URISyntaxException {
         this.config = config;
-        this.authUrl = config.getAuthUrl();
     }
 
     @Override
     public AuthResponse authenticate(String tenantId) {
         logger.info("Starting authentication with marketing cloud for tenant id [{}].", tenantId);
-        final String tenantSpecificAuthUrl = String.format(authUrl, tenantId);
-        final ResponseEntity<AuthResponse> response;
+
+        final URI tenantSpecificAuthUri = McPaths.getUri(config.getAuthBaseUrl(), tenantId, McPaths.V2_TOKEN);
+
+        HttpPost authPost = new HttpPost(tenantSpecificAuthUri);
+        authPost.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        authPost.addHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
+        CloseableHttpResponse httpResponse;
         try {
-            response = rest.postForEntity(tenantSpecificAuthUrl, baseRequest(), AuthResponse.class);
+            authPost.setEntity(new ByteArrayEntity(mapper.writeValueAsBytes(baseRequest())));
+            httpResponse = httpClient.execute(authPost);
         } catch (Exception e) {
             throw new AuthenticationException(e);
         }
 
-        final AuthResponse responseBody = response.getBody();
-        if (responseBody == null) {
-            throw new AuthenticationException("Response for authentication request is null.");
+        HttpEntity entity = httpResponse.getEntity();
+        if (entity == null) {
+            throw new AuthenticationException("Entity/Response body obtained is null");
         }
 
-        logger.info("Successful authenticating with marketing cloud for tenant id [{}]. Auth response is {}", tenantId, responseBody);
-        return response.getBody();
+        AuthResponse authResponse;
+        try {
+            final byte[] bytes = EntityUtils.toByteArray(entity); // also closes underlying stream
+            authResponse = mapper.readValue(bytes, AuthResponse.class);
+        } catch (Exception e) {
+            throw new AuthenticationException(e);
+        } finally {
+            try {
+                httpResponse.close();
+            } catch (IOException e) {
+                logger.error("Cannot close Http response after authentication", e);
+            }
+        }
+        logger.info("Successful authenticating with marketing cloud for tenant id [{}]. Auth response is {}", tenantId, authResponse);
+        return authResponse;
     }
 
     private AuthRequest baseRequest() {

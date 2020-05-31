@@ -8,9 +8,9 @@ public class McConfigurationProperties {
     private String clientId;
     private String clientSecret;
     private String defaultTenantId;
-    private String soapServiceUrl = "https://%s.soap.marketingcloudapis.com/Service.asmx";
+    private String soapBaseUrl = "https://%s.soap.marketingcloudapis.com/";
     private String restBaseUrl = "https://%s.rest.marketingcloudapis.com/";
-    private String authUrl = "https://%s.auth.marketingcloudapis.com/v2/token";
+    private String authBaseUrl = "https://%s.auth.marketingcloudapis.com/";
     private String scope;
 
     public String getClientId() {
@@ -45,12 +45,12 @@ public class McConfigurationProperties {
         this.scope = scope;
     }
 
-    public String getSoapServiceUrl() {
-        return soapServiceUrl;
+    public String getSoapBaseUrl() {
+        return soapBaseUrl;
     }
 
-    public void setSoapServiceUrl(String soapServiceUrl) {
-        this.soapServiceUrl = soapServiceUrl;
+    public void setSoapBaseUrl(String soapBaseUrl) {
+        this.soapBaseUrl = soapBaseUrl;
     }
 
     public String getRestBaseUrl() {
@@ -61,11 +61,11 @@ public class McConfigurationProperties {
         this.restBaseUrl = restBaseUrl;
     }
 
-    public String getAuthUrl() {
-        return authUrl;
+    public String getAuthBaseUrl() {
+        return authBaseUrl;
     }
 
-    public void setAuthUrl(String authUrl) {
-        this.authUrl = authUrl;
+    public void setAuthBaseUrl(String authBaseUrl) {
+        this.authBaseUrl = authBaseUrl;
     }
 }
